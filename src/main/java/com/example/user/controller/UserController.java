@@ -14,6 +14,8 @@ import com.example.user.model.CreateUserReq;
 import com.example.user.model.UserProfile;
 import com.example.user.service.UserService;
 
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import jakarta.validation.Valid;
 
 @RestController
@@ -30,14 +32,36 @@ public class UserController {
     }
 
     @GetMapping("/{id}")
+    @ApiResponse(responseCode = "200")
+    @ApiResponse(responseCode = "404", description = "User not found", content = @Content)
     public ResponseEntity<ApiResp<UserProfile>> getUserById(@PathVariable Long id) {
-        var user = userService.getUserById(id).orElseThrow(() -> new UserNotFoundException());
-        return new ResponseEntity<>(ApiResp.success(RespMapper.mapUser(user)), HttpStatus.OK);
+        var userProfile = userService.getUserById(id).orElseThrow(() -> new UserNotFoundException());
+        return new ResponseEntity<>(ApiResp.success(RespMapper.mapUser(userProfile)), HttpStatus.OK);
+    }
+
+    @PutMapping
+    @ApiResponse(responseCode = "404", content = @Content)
+    public void updateUser(@Valid @RequestBody CreateUserReq user) {
+        var existingUser = userService.getUserById(user.getId());
+        if (!existingUser.isPresent()) {
+            throw new UserNotFoundException();
+        }
+
+        userService.updateUser(ReqMapper.mapCreateUser(user));
     }
 
     @PostMapping
     @ResponseStatus(code = HttpStatus.CREATED)
     public void createUser(@Valid @RequestBody CreateUserReq user) {
         userService.createUser(ReqMapper.mapCreateUser(user));
+    }
+
+    @DeleteMapping("/{id}")
+    @ApiResponse(responseCode = "200")
+    @ApiResponse(responseCode = "404", content = @Content)
+    public void deleteUserProfile(@PathVariable Long id) {
+        var userProfile = userService.getUserById(id).orElseThrow(() -> new UserNotFoundException());
+        userService.deleteUser(userProfile);
+
     }
 }
